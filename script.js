@@ -7,83 +7,70 @@ document.addEventListener("DOMContentLoaded", () => {
     const postsList = document.getElementById("postsList");
 
 
+    function doAjax(url) {
+        return new Promise(function (resolve, reject) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+
+            xhr.responseType = "json";
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    resolve(xhr.response);
+                } else {
+                    reject(new Error("Помилка сервера: " + xhr.status));
+                }
+            };
+
+            xhr.onerror = function () {
+                reject(new Error("Помилка мережі. Перевірте підключення."));
+            };
+
+            xhr.send();
+        });
+    }
+
     const loadData = () => {
 
-        resultBox.innerHTML = '<div class="message">Завантаження...</div>';
+        resultBox.innerHTML =
+            '<div class="message">Завантаження...</div>';
 
-        const xmlHttp = new XMLHttpRequest();
+        doAjax("https://jsonplaceholder.typicode.com/users")
 
-        xmlHttp.open(
-            "GET",
-            "https://jsonplaceholder.typicode.com/users",
-            true
-        );
+            .then(function (users) {
+                if (users && users.length > 0) {
+                    let html = '<div class="users-container">';
+                    users.forEach(function (user) {
 
-        xmlHttp.responseType = "json";
-        xmlHttp.setRequestHeader("Accept", "application/json");
-
-        xmlHttp.onload = () => {
-
-            if (xmlHttp.status === 200) {
-
-                try {
-                    const response = xmlHttp.response;
-
-                    if (response && response.length > 0) {
-
-                        const users = response.map(item => {
-                            return {
-                                id: item.id,
-                                name: item.name,
-                                username: item.username,
-                                email: item.email,
-                                phone: item.phone,
-                                website: item.website,
-                                address: item.address,
-                                company: item.company
-                            };
-                        });
-
-                        let html = '<div class="users-container">';
-
-                        users.forEach(user => {
-                            html += `
-                           <div class="user-card" onclick="showUser(${user.id})">
-                           <h3>${user.name}</h3>
-         
-                           </div>
+                        html += `
+                            <div class="user-card" onclick="showUser(${user.id})">
+                                <h3>${user.name}</h3>
+                            </div>
                         `;
-                        });
 
-                        html += '</div>';
+                    });
 
-                        resultBox.innerHTML = html;
+                    html += '</div>';
 
-                    } else {
-                        resultBox.innerHTML =
-                            '<div class="message error">Отримано порожній файл.</div>';
-                    }
+                    resultBox.innerHTML = html;
+                } else {
 
-                } catch (e) {
                     resultBox.innerHTML =
-                        `<div class="message error">Помилка обробки: ${e.message}</div>`;
+                        '<div class="message error">Список користувачів порожній.</div>';
+
                 }
 
-            } else {
+            })
+
+            .catch(function (error) {
+
                 resultBox.innerHTML =
-                    `<div class="message error">Помилка сервера: ${xmlHttp.status}</div>`;
-            }
-        };
+                    `<div class="message error">${error.message}</div>`;
 
-        xmlHttp.onerror = () => {
-            resultBox.innerHTML =
-                '<div class="message error">Помилка мережі. Перевірте з\'єднання.</div>';
-        };
+            });
 
-        xmlHttp.send();
     };
 
-    loadData();
 
     const showUser = (id) => {
 
@@ -91,22 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
         postsList.style.display = 'none';
         detailsBox.innerHTML = '<p>Завантаження інформації...</p>';
 
-        const xmlHttp = new XMLHttpRequest();
-
-        xmlHttp.open(
-            "GET",
-            `https://jsonplaceholder.typicode.com/users/${id}`,
-            true
-        );
-
-        xmlHttp.responseType = "json";
-
-        xmlHttp.onload = () => {
-
-            if (xmlHttp.status === 200) {
-
-                const user = xmlHttp.response;
-
+        doAjax(`https://jsonplaceholder.typicode.com/users/${id}`)
+            .then(function (user) {
                 if (user && user.id) {
 
                     detailsBox.innerHTML = `
@@ -134,18 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     detailsBox.innerHTML = 'Користувача не знайдено.';
                 }
+            })
 
-            } else {
-                detailsBox.innerHTML = 'Помилка сервера: ' + xmlHttp.status;
-            }
-        };
+            .catch(function (error) {
+                detailsBox.innerHTML = error.message;
+            });
 
-        xmlHttp.onerror = () => {
-            detailsBox.innerHTML = 'Помилка мережі.';
-        };
-
-        xmlHttp.send();
     };
+
+
     const showPosts = (userId) => {
 
         if (postsList.style.display === 'block') {
@@ -157,27 +127,13 @@ document.addEventListener("DOMContentLoaded", () => {
         postsList.style.display = 'block';
         postsList.innerHTML = '<p>Завантаження постів...</p>';
 
-        const xmlHttp = new XMLHttpRequest();
-
-        xmlHttp.open(
-            "GET",
-            `https://jsonplaceholder.typicode.com/posts?userId=${userId}`,
-            true
-        );
-
-        xmlHttp.responseType = "json";
-
-        xmlHttp.onload = () => {
-
-            if (xmlHttp.status === 200) {
-
-                const posts = xmlHttp.response;
-
+        doAjax(`https://jsonplaceholder.typicode.com/posts?userId=${userId}`)
+            .then(function (posts) {
                 if (posts && posts.length > 0) {
 
                     let html = '<div class="posts-container">';
 
-                    posts.forEach(post => {
+                    posts.forEach(function (post) {
                         html += `
                         <div class="post-card">
                             <h3>${post.title}</h3>
@@ -194,20 +150,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     postsList.innerHTML = '<p>Постів не знайдено.</p>';
                 }
 
-            } else {
-                postsList.innerHTML =
-                    `<p>Помилка сервера: ${xmlHttp.status}</p>`;
-            }
-        };
+            })
+            .catch(function (error) {
+                postsList.innerHTML = error.message;
+            });
+    };
 
-        xmlHttp.onerror = () => {
-            postsList.innerHTML = '<p>Помилка мережі.</p>';
-        };
-
-        xmlHttp.send();
-    }
     window.showUser = showUser;
     window.showPosts = showPosts;
+
+    loadData();
 
 });
 
